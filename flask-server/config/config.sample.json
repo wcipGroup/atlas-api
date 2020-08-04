@@ -1,0 +1,27 @@
+{
+  "TEST": {
+    "TEST_STRING": "",
+    "TEST_NUMBER": 0
+  },
+  "DEBUG": true,
+  "OPEN_DATA": {
+    "TOWN": "",
+    "SOURCES": [],
+    "OPEN_WEATHER_MAP": {
+      "KEY": ""
+    },
+    "WEATHER_API": {
+      "KEY": ""
+    },
+    "WEATHER_STACK": {
+      "KEY": ""
+    }
+  },
+  "MONGO": {
+    "USER": "",
+    "PASSWORD": "",
+    "HOST": "",
+    "DATABASE": "",
+    "DEBUG_DATABASE": ""
+  }
+}
