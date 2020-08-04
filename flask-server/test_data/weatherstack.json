@@ -1,0 +1,37 @@
+{
+  "request":{
+    "type":"City",
+    "query":"Thessaloniki, Greece",
+    "language":"en",
+    "unit":"m"
+  },
+  "location":{
+    "name":"Thessaloniki",
+    "country":"Greece",
+    "region":"Central Macedonia",
+    "lat":"40.644",
+    "lon":"22.931",
+    "timezone_id":"Europe\/Athens",
+    "localtime":"2020-07-24 17:13",
+    "localtime_epoch":1595610780,
+    "utc_offset":"3.0"
+  },
+  "current":{
+    "observation_time":"02:13 PM",
+    "temperature":33,
+    "weather_code":116,
+    "weather_icons":["https://assets.weatherstack.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png"],
+    "weather_descriptions":["Partly cloudy"],
+    "wind_speed":11,
+    "wind_degree":230,
+    "wind_dir":"SW",
+    "pressure":1009,
+    "precip":0,
+    "humidity":34,
+    "cloudcover":25,
+    "feelslike":34,
+    "uv_index":8,
+    "visibility":10,
+    "is_day":"yes"
+  }
+}
