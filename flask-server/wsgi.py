@@ -2,6 +2,8 @@ from myapp import application
 from config.configuration import Configuration
 from persistence.mongoClient import Mongo
 import os
+import time
+import threading
 from threading import Lock
 
 # application._before_request_lock = Lock
@@ -15,7 +17,10 @@ from threading import Lock
 #     if application._got_first_request:
 #       return
 #     print("BEFORE REQUEST")
-
+def mqttc_keep_alive(mqttc):
+  while 1:
+    mqttc.publish('atlas/keep_alive', "heartbeat")
+    time.sleep(30)
 @application.before_first_request
 def setting_communications():
   try:
@@ -24,6 +29,8 @@ def setting_communications():
     Configuration(os.path.join(cwd, 'config/config.json'))
     config = Configuration.get()
     db = Mongo()
+    mqttc = Mongo.get_mqttc()
+    threading.Thread(target=mqttc_keep_alive, args=(mqttc,)).start()
   except Exception as e:
     print("log", str(e))
 

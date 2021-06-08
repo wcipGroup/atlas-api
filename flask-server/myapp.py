@@ -5,6 +5,10 @@ from apis import app as application
 import os
 from config.configuration import Configuration
 from persistence.mongoClient import Mongo
+import time
+import threading
+import paho.mqtt.client as mqtt
+
 application.config['JWT_SECRET_KEY'] = 'dsakjlrew@#RSdf'
 # app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=2)
 application.config['JWT_ALGORITHM'] = 'HS384'
@@ -45,7 +49,10 @@ def my_invalid_token_loader(token):
 # @jwt.user_identity_loader
 # def user_identity_lookup(user):
 #     return user['id']
-
+def mqttc_keep_alive(mqttc):
+    while 1:
+        mqttc.publish('atlas/keep_alive', "heartbeat")
+        time.sleep(30)
 
 if __name__ == "__main__":
     try:
@@ -53,6 +60,8 @@ if __name__ == "__main__":
         Configuration(os.path.join(cwd, 'config/config.json'))
         config = Configuration.get()
         db = Mongo()
+        mqttc = Mongo.get_mqttc()
+        threading.Thread(target=mqttc_keep_alive, args=(mqttc,)).start()
     except Exception as e:
         raise SystemExit("Error while setting communications: {}".format(str(e)))
 
