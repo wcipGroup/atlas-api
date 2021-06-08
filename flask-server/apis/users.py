@@ -4,6 +4,7 @@ import hashlib
 import time
 from datetime import datetime, timezone, timedelta
 from persistence.mongoClient import Mongo
+import json
 
 api = Blueprint('user', __name__)
 
@@ -24,6 +25,21 @@ def authenticate():
     access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
     return jsonify(access_token=access_token, identity=data["username"]), 200
 
+@api.route('/users/newPass/<userId>', methods=['POST'])
+@jwt_required
+def changePassword(userId):
+    data = request.get_json()
+    if not ("password" in data.keys()):
+        return "Bad Call", 400
+    data["password"] =hashlib.md5(data["password"].encode()).hexdigest()
+    db = Mongo.get_db()
+    col = db["auth"]
+    col.update({"username": userId}, {"$set": {"password": data["password"]}})
+    # if not col.find(data).count():
+    #     return "Not Found", 404
+    # access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
+    # return jsonify(access_token=access_token, identity=data["username"]), 200
+    return jsonify(data="okk"), 200
 
 @api.route('/user-data/applications/<userId>', methods=['GET', 'POST'])
 @jwt_required
@@ -54,6 +70,32 @@ def getAppcilations(userId):
             return jsonify(msg="Bad Gateway"), 501
 
 
+@api.route('/user-data/profile/<userId>', methods=['GET', 'POST'])
+@jwt_required
+def getProfile(userId):
+    if request.method == "GET":
+        if not userId:
+            return "Bad Call", 400
+        db = Mongo.get_db()
+        col = db["profile"]
+        profile = list(col.find({"username": userId}, {'_id': 0}))
+        if len(profile):
+            return jsonify(profile=profile[0]), 200
+        return "Not found", 404
+    if request.method == "POST":
+        data = request.get_json()
+        if not ("autoActions" in data.keys() and "autoActionsTimePeriod" in data.keys()):
+            return "Bad Call", 400
+        db = Mongo.get_db()
+        col = db["profile"]
+        if col.update_one({"username": userId},
+                          {"$set": {"autoActions": data["autoActions"],
+                                    "autoActionsTimePeriod": data["autoActionsTimePeriod"]}
+                           }, upsert=True).acknowledged:
+            return jsonify(msg="ok"), 200
+        else:
+            return jsonify(msg="Bad Gateway"), 501
+
 @api.route('/user-data/devices/<appId>', methods=['GET', 'POST'])
 @jwt_required
 def getDevices(appId):
@@ -72,7 +114,7 @@ def getDevices(appId):
             dt["dateCreated"] = datetime.now()
             if col.insert_one(dt).acknowledged:
                 col = db["applications"]
-                if col.update_one({"appId": appId}, {"$push": {"devices": dt["devAddr"]}}).modified_count:
+                if col.update_one({"appId": appId}, {"$push": {"devices": dt["devAddr"]}}, upsert=True).modified_count:
                     return jsonify(msg="ok"), 200
                 else:
                     return jsonify(msg="Bad Gateway"), 501
@@ -109,5 +151,7 @@ def getStatus(devAddr):
 @api.route('/user-action/<ownerId>', methods=['POST'])
 def action(ownerId):
     data = request.get_json()
+    mqttc = Mongo.get_mqttc()
+    mqttc.publish('atlas/action', json.dumps(data))
     print(data)
     return "ok", 200
