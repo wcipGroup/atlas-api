@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone, timedelta
 from persistence.mongoClient import Mongo
 import json
+from amqp.publisher import Publisher
 
 api = Blueprint('user', __name__)
 
@@ -25,6 +26,7 @@ def authenticate():
     access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
     return jsonify(access_token=access_token, identity=data["username"]), 200
 
+
 @api.route('/users/newPass/<userId>', methods=['POST'])
 @jwt_required
 def changePassword(userId):
@@ -40,6 +42,7 @@ def changePassword(userId):
     # access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
     # return jsonify(access_token=access_token, identity=data["username"]), 200
     return jsonify(data="okk"), 200
+
 
 @api.route('/user-data/applications/<userId>', methods=['GET', 'POST'])
 @jwt_required
@@ -96,6 +99,7 @@ def getProfile(userId):
         else:
             return jsonify(msg="Bad Gateway"), 501
 
+
 @api.route('/user-data/devices/<appId>', methods=['GET', 'POST'])
 @jwt_required
 def getDevices(appId):
@@ -121,7 +125,7 @@ def getDevices(appId):
             else:
                 return jsonify(msg="Bad Gateway"), 501
         except Exception:
-            return jsonify(msg="ok"), 200
+            return jsonify(msg="Bad Gateway"), 501
 
 
 @api.route('/user-data/devices-by-owner/<ownerId>', methods=['GET', 'POST'])
@@ -148,6 +152,7 @@ def getStatus(devAddr):
     status = list(col.find({"devAddr": devAddr, "msgType": "04"}, {"_id": 0}).sort([("date", -1)]).limit(1))
     return jsonify(status=status), 200
 
+
 @api.route('/user-action/<ownerId>', methods=['POST'])
 def action(ownerId):
     data = request.get_json()
@@ -155,3 +160,32 @@ def action(ownerId):
     mqttc.publish('atlas/action', json.dumps(data))
     print(data)
     return "ok", 200
+
+
+@api.route('/user-data/<devAddr>/interval', methods=['GET', 'POST'])
+def deviceInterval(devAddr):
+    if request.method == "POST":
+        try:
+            dt = request.get_json()
+            interval = dt["interval"]
+            db = Mongo.get_db()
+            col = db["downlink_mac"]
+            col.update({"devAddr": devAddr},
+                       {"$set": {"interval": {"commandType": "interval", "commandId": 1,
+                                 "value":  interval, "dateCreated": datetime.now(),
+                                 "status": "pending"}}},
+                       upsert=True)
+        except Exception:
+            return jsonify(msg="Bad Gateway"), 501
+        return jsonify(msg="ok"), 200
+    if request.method == "GET":
+        try:
+            db = Mongo.get_db()
+            col = db["downlink_mac"]
+            downlink_mac = list(col.find({"devAddr": devAddr}))
+            if len(downlink_mac):
+                if downlink_mac[0]['interval']:
+                    return jsonify(interval=downlink_mac[0]['interval']), 200
+            return jsonify(interval=20), 200
+        except Exception:
+            return jsonify(msg="Bad Gateway"), 501

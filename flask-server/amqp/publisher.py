@@ -3,26 +3,40 @@ import pika
 
 class Publisher:
 
+    channel = None
+    queue = None
+    connection = None
+
     def __init__(self, config):
         try:
             self.config = config
-            credentials = pika.PlainCredentials(config.get('user'), config.get('passwd'))
-            self.connection = pika.BlockingConnection(pika.ConnectionParameters(config.get('amqp_ip'),
-                                                                                credentials=credentials,
-                                                                                heartbeat=600))
-            self.channel = self.connection.channel()
-            self.queue = config.get('queue')
-            self.channel.queue_declare(queue=self.queue)
+            credentials = pika.PlainCredentials(config["USER"], config["PASSWORD"])
+            Publisher.connection = pika.BlockingConnection(pika.ConnectionParameters(config['AMQP_IP'],
+                                                                                     credentials=credentials,
+                                                                                     heartbeat=600))
+            Publisher.queue = config['QUEUE']
+            # self.channel = self.connection.channel()
+            # self.channel.queue_declare(queue=self.queue)
+            Publisher.channel = Publisher.connection.channel()
+            Publisher.channel.queue_declare(queue=Publisher.queue)
         except Exception as e:
             raise e
 
-    def publish(self, message):
+    @staticmethod
+    def publish(message):
         try:
-            self.channel.basic_publish(exchange='', routing_key=self.queue, body=message)
+            Publisher.channel.basic_publish(exchange='', routing_key=Publisher.queue, body=message)
             print("published")
         except Exception as e:
             print(e)
 
-    def stop(self):
-        self.channel.close()
-        self.connection.close()
+    @staticmethod
+    def get_channel():
+        if Publisher.channel:
+            return Publisher.channel
+        raise SystemExit("Publisher is not set")
+
+    @staticmethod
+    def stop():
+        Publisher.channel.close()
+        Publisher.connection.close()

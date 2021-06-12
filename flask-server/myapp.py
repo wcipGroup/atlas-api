@@ -5,6 +5,7 @@ from apis import app as application
 import os
 from config.configuration import Configuration
 from persistence.mongoClient import Mongo
+from amqp.publisher import Publisher
 import time
 import threading
 import paho.mqtt.client as mqtt
@@ -60,6 +61,7 @@ if __name__ == "__main__":
         Configuration(os.path.join(cwd, 'config/config.json'))
         config = Configuration.get()
         db = Mongo()
+        pub = Publisher(config["AMQP"])
         mqttc = Mongo.get_mqttc()
         threading.Thread(target=mqttc_keep_alive, args=(mqttc,)).start()
     except Exception as e:

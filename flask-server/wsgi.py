@@ -1,6 +1,7 @@
 from myapp import application
 from config.configuration import Configuration
 from persistence.mongoClient import Mongo
+from amqp.publisher import Publisher
 import os
 import time
 import threading
@@ -29,6 +30,7 @@ def setting_communications():
     Configuration(os.path.join(cwd, 'config/config.json'))
     config = Configuration.get()
     db = Mongo()
+    pub = Publisher(config["AMQP"])
     mqttc = Mongo.get_mqttc()
     threading.Thread(target=mqttc_keep_alive, args=(mqttc,)).start()
   except Exception as e:
