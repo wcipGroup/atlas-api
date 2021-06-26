@@ -1,6 +1,8 @@
 from config.configuration import Configuration
 from pymongo import MongoClient
 import paho.mqtt.client as mqtt
+import socket
+
 
 class Mongo():
     __config = None
@@ -12,6 +14,7 @@ class Mongo():
     __auth_db = None
     __timeout = None
     __mqttc = None
+    __mbus_server_ip = None
     connection = None
     db = None
 
@@ -38,6 +41,8 @@ class Mongo():
             self.__check_connection()
             Mongo.__mqttc = mqtt.Client()
             Mongo.__mqttc.connect(self.__mongo_config["MQTT_SERVER"], 1883, 60)
+
+            Mongo.__mbus_server_ip = self.__mongo_config["MBUS_SERVER"]
         except Exception as e:
             raise e
 
@@ -71,3 +76,7 @@ class Mongo():
         if Mongo.__mqttc:
             return Mongo.__mqttc
         raise SystemExit("MQTT is not set")
+
+    @staticmethod
+    def get_mbus_server_ip():
+        return Mongo.__mbus_server_ip
