@@ -4,6 +4,7 @@ from flask import jsonify
 from config.configuration import Configuration
 import requests
 
+
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -12,7 +13,9 @@ def admin_required(fn):
             return jsonify({"msg": "Admin required"}), 403
         else:
             return fn(*args, **kwargs)
+
     return wrapper()
+
 
 def openweathermap():
     config = Configuration.get()
@@ -20,8 +23,9 @@ def openweathermap():
     params = {}
     params["q"] = config["OPEN_DATA"]["TOWN"]
     params["appid"] = config["OPEN_DATA"]["OPEN_WEATHER_MAP"]["KEY"]
-    r = requests.get(url,params)
+    r = requests.get(url, params)
     return r
+
 
 def weatherapi():
     config = Configuration.get()
@@ -32,6 +36,7 @@ def weatherapi():
     r = requests.get(url, params)
     return r
 
+
 def weatherstack():
     config = Configuration.get()
     url = "http://api.weatherstack.com/current"
@@ -40,3 +45,14 @@ def weatherstack():
     params["access_key"] = config["OPEN_DATA"]["WEATHER_STACK"]["KEY"]
     r = requests.get(url, params)
     return r
+
+
+def findIndexOfActuator(data):
+    if data["actuator"] == "feeder": return 0
+    if data["actuator"] == "alarm": return 2
+    if data["actuator"] == "oxygen": return 4
+    if data["actuator"] == "coldWater": return 6
+    if data["actuator"] == "hotWater": return 8
+    if data["actuator"] == "acid": return 10
+    if data["actuator"] == "base": return 12
+    raise Exception

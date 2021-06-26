@@ -6,6 +6,10 @@ from datetime import datetime, timezone, timedelta
 from persistence.mongoClient import Mongo
 import json
 from amqp.publisher import Publisher
+from umodbus import conf
+from umodbus.client import tcp
+import socket
+from apis.utils import findIndexOfActuator
 
 api = Blueprint('user', __name__)
 
@@ -153,14 +157,29 @@ def getStatus(devAddr):
     return jsonify(status=status), 200
 
 
-@api.route('/user-action/<ownerId>', methods=['POST'])
+@api.route('/user-action/<ownerId>', methods=['POST', 'GET'])
 def action(ownerId):
-    data = request.get_json()
-    mqttc = Mongo.get_mqttc()
-    mqttc.publish('atlas/action', json.dumps(data))
-    print(data)
-    return "ok", 200
+    conf.SIGNED_VALUES = True
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((Mongo.get_mbus_server_ip(), 2459))
+    message = tcp.read_holding_registers(slave_id=1, starting_address=1, quantity=14)
+    register_values = tcp.send_message(message, sock)
+    if request.method == "POST":
+        data = request.get_json()
+        # mqttc = Mongo.get_mqttc()
+        # mqttc.publish('atlas/action', json.dumps(data))
 
+        print(data)
+        idx = findIndexOfActuator(data)
+        register_values[idx] = 1
+        register_values[idx+1] = data["time"]
+        message = tcp.write_multiple_registers(slave_id=1, starting_address=1, values=register_values)
+        tcp.send_message(message, sock)
+        sock.close()
+        return "ok", 200
+    if request.method == "GET":
+        sock.close()
+        return jsonify(register_values=register_values), 200
 
 @api.route('/user-data/<devAddr>/interval', methods=['GET', 'POST'])
 def deviceInterval(devAddr):
