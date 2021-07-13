@@ -208,3 +208,61 @@ def deviceInterval(devAddr):
             return jsonify(interval=20), 200
         except Exception:
             return jsonify(msg="Bad Gateway"), 501
+
+
+@api.route('/user-data/notifications/<destId>', methods=['GET', 'POST'])
+def notifiations(destId):
+    if request.method == "GET":
+        params = list(request.args.keys())
+        if 'nPerPage' not in params:
+            return jsonify(msg="Bad Request"), 401
+        else:
+            nPerPage = int(request.args.get('nPerPage'))
+        if 'directionNext' in params:
+            nextPage = True
+        else:
+            nextPage = False
+        if 'startId' in params:
+            startId = request.args.get('startId')
+        else:
+            startId = False
+        db = Mongo.get_db()
+        col = db["notifications"]
+        total_documents = list(col.aggregate([{"$match": {"dest": destId}}, {"$count": "total_documents"}]))
+        if len(total_documents):
+            total_documents = total_documents[0]["total_documents"]
+        else:
+            return jsonify(msg="Not Found"), 404
+        if startId:
+            if nextPage:
+                results = list(
+                    col.find({"dest": destId, "time": {"$lt": int(startId)}}, {"_id": 0}).sort("_id", -1).limit(
+                        nPerPage))
+            else:
+                results = list(
+                    col.find({"dest": destId, "time": {"$gt": int(startId)}}, {"_id": 0}).sort("_id", -1).limit(
+                        nPerPage))
+            # pagination with time is wrong. In the future i will have to select a starting point of a unique
+            # ascending index. (not an ObjectId though because its not a json serializable type
+        else:
+            results = list(col.find({"dest": destId}, {"_id": 0}).sort("_id", -1).limit(nPerPage))
+        return jsonify(data=results, count=total_documents, msg="OK"), 200
+    if request.method == "POST":
+        try:
+            dt = request.get_json()
+            if not all(item in dt.keys() for item in ['msgBody', 'source']):
+                return jsonify(msg="Bad Request"), 401
+            db = Mongo.get_db()
+            col = db["notifications"]
+            if col.insert_one({
+                "msgBody": dt["msgBody"],
+                "date": datetime.now(),
+                "time": int(datetime.timestamp(datetime.now())),
+                "dest": destId,
+                "source": dt["source"]
+            }).acknowledged:
+                return jsonify(msg="ok"), 200
+            else:
+                return jsonify(msg="Bad Gateway"), 501
+        except Exception:
+            return jsonify(msg="Bad Gateway"), 501
