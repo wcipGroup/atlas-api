@@ -240,8 +240,9 @@ def notifiations(destId):
                         nPerPage))
             else:
                 results = list(
-                    col.find({"dest": destId, "time": {"$gt": int(startId)}}, {"_id": 0}).sort("_id", -1).limit(
+                    col.find({"dest": destId, "time": {"$gt": int(startId)}}, {"_id": 0}).sort("_id", 1).limit(
                         nPerPage))
+                results.sort(key=lambda x: x["time"], reverse=True)
             # pagination with time is wrong. In the future i will have to select a starting point of a unique
             # ascending index. (not an ObjectId though because its not a json serializable type
         else:
