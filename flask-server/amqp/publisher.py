@@ -11,7 +11,8 @@ class Publisher:
         try:
             self.config = config
             credentials = pika.PlainCredentials(config["USER"], config["PASSWORD"])
-            Publisher.connection = pika.BlockingConnection(pika.ConnectionParameters(config['AMQP_IP'],
+            Publisher.connection = pika.BlockingConnection(pika.ConnectionParameters(host=config['AMQP_IP'],
+                                                                                     port=config['PORT'],
                                                                                      credentials=credentials,
                                                                                      heartbeat=600))
             Publisher.queue = config['QUEUE']

@@ -19,16 +19,19 @@ fake_user = [{"username": "test@tlas", "password": "71f78bda76e73d5b97a30b22f226
 @api.route('/users/authenticate', methods=['POST'])
 def authenticate():
     data = request.get_json()
-    if (not ("password" in data.keys() and "username" in data.keys())):
-        return "Bad Call", 400
-    data["password"] =hashlib.md5(data["password"].encode()).hexdigest()
+    try:
+        if not ("password" in data.keys() and "username" in data.keys()):
+            return "Bad Call", 400
+        data["password"] = hashlib.md5(data["password"].encode()).hexdigest()
 
-    db = Mongo.get_db()
-    col = db["auth"]
-    if not col.find(data).count():
-        return "Not Found", 404
-    access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
-    return jsonify(access_token=access_token, identity=data["username"]), 200
+        db = Mongo.get_db()
+        col = db["auth"]
+        if not col.find(data).count():
+            return jsonify(msg="not found"), 404
+        access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
+        return jsonify(access_token=access_token, identity=data["username"]), 200
+    except:
+        return jsonify(msg="bad gateway"), 500
 
 
 @api.route('/users/newPass/<userId>', methods=['POST'])
@@ -37,7 +40,7 @@ def changePassword(userId):
     data = request.get_json()
     if not ("password" in data.keys()):
         return "Bad Call", 400
-    data["password"] =hashlib.md5(data["password"].encode()).hexdigest()
+    data["password"] = hashlib.md5(data["password"].encode()).hexdigest()
     db = Mongo.get_db()
     col = db["auth"]
     col.update({"username": userId}, {"$set": {"password": data["password"]}})
@@ -46,35 +49,6 @@ def changePassword(userId):
     # access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
     # return jsonify(access_token=access_token, identity=data["username"]), 200
     return jsonify(data="okk"), 200
-
-
-@api.route('/user-data/applications/<userId>', methods=['GET', 'POST'])
-@jwt_required
-def getAppcilations(userId):
-    # verify_jwt_in_request()
-    if request.method == "GET":
-        if not userId:
-            return "Bad Call", 400
-        db = Mongo.get_db()
-        col = db["applications"]
-        applications = list(col.find({"ownerId": userId}, {'_id': 0}))
-        return jsonify(applications=applications), 200
-    if request.method == "POST":
-        try:
-            dt = request.get_json()
-            dt["hasAppKey"] = False if dt["appKey"] == "" else True
-            # dt["ownerId"] = get_jwt_identity()
-            dt["ownerId"] = userId
-            dt["dateCreated"] = datetime.now()
-            dt["devices"] = []
-            db = Mongo.get_db()
-            col = db["applications"]
-            if col.insert_one(dt).acknowledged:
-                return jsonify(msg="ok"), 200
-            else:
-                return jsonify(msg="Bad Gateway"), 501
-        except Exception:
-            return jsonify(msg="Bad Gateway"), 501
 
 
 @api.route('/user-data/profile/<userId>', methods=['GET', 'POST'])
@@ -142,6 +116,7 @@ def getDevicesByOwner(ownerId):
 
 
 @api.route('/user-data/data/<devAddr>', methods=['GET'])
+@jwt_required
 def getData(devAddr):
     db = Mongo.get_db()
     col = db["device_raw_data"]
@@ -150,6 +125,7 @@ def getData(devAddr):
 
 
 @api.route('/user-data/status/<devAddr>', methods=['GET'])
+@jwt_required
 def getStatus(devAddr):
     db = Mongo.get_db()
     col = db["device_raw_data"]
@@ -157,31 +133,43 @@ def getStatus(devAddr):
     return jsonify(status=status), 200
 
 
-@api.route('/user-action/<ownerId>', methods=['POST', 'GET'])
-def action(ownerId):
-    conf.SIGNED_VALUES = True
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((Mongo.get_mbus_server_ip(), 2459))
-    message = tcp.read_holding_registers(slave_id=1, starting_address=1, quantity=14)
-    register_values = tcp.send_message(message, sock)
+@api.route('/user-action/<gwId>', methods=['POST', 'GET'])
+@jwt_required
+def action(gwId):
     if request.method == "POST":
+        # TODO: check the owner of this gw with get_jwt_identity() at the db first
         data = request.get_json()
-        # mqttc = Mongo.get_mqttc()
-        # mqttc.publish('atlas/action', json.dumps(data))
-
-        print(data)
         idx = findIndexOfActuator(data)
-        register_values[idx] = 1
-        register_values[idx+1] = data["time"]
-        message = tcp.write_multiple_registers(slave_id=1, starting_address=1, values=register_values)
-        tcp.send_message(message, sock)
-        sock.close()
-        return "ok", 200
-    if request.method == "GET":
-        sock.close()
-        return jsonify(register_values=register_values), 200
+        print(idx)
+        mqttc = Mongo.get_mqttc()
+        dl = '{"actuator": %s, "actuatorCode": %s, "time": %s}' % (data["action"], idx, data["actionTime"])
+        mqttc.publish('atlas/%s/action' % gwId, dl)
+        return jsonify(msg="ok"), 200
+
+# With modbus server
+# @api.route('/user-action/<ownerId>', methods=['POST', 'GET'])
+# def action(ownerId):
+#     conf.SIGNED_VALUES = True
+#     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     sock.connect((Mongo.get_mbus_server_ip(), 2459))
+#     message = tcp.read_holding_registers(slave_id=1, starting_address=1, quantity=14)
+#     register_values = tcp.send_message(message, sock)
+#     if request.method == "POST":
+#         data = request.get_json()
+#         idx = findIndexOfActuator(data)
+#         register_values[idx] = 1
+#         register_values[idx + 1] = data["time"]
+#         message = tcp.write_multiple_registers(slave_id=1, starting_address=1, values=register_values)
+#         tcp.send_message(message, sock)
+#         sock.close()
+#         return "ok", 200
+#     if request.method == "GET":
+#         sock.close()
+#         return jsonify(register_values=register_values), 200
+
 
 @api.route('/user-data/<devAddr>/interval', methods=['GET', 'POST'])
+@jwt_required
 def deviceInterval(devAddr):
     if request.method == "POST":
         try:
@@ -191,8 +179,8 @@ def deviceInterval(devAddr):
             col = db["downlink_mac"]
             col.update({"devAddr": devAddr},
                        {"$set": {"interval": {"commandType": "interval", "commandId": 1,
-                                 "value":  interval, "dateCreated": datetime.now(),
-                                 "status": "pending"}}},
+                                              "value": interval, "dateCreated": datetime.now(),
+                                              "status": "pending"}}},
                        upsert=True)
         except Exception:
             return jsonify(msg="Bad Gateway"), 501
