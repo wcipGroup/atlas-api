@@ -22,6 +22,7 @@ def mqttc_keep_alive(mqttc):
   while 1:
     mqttc.publish('atlas/keep_alive', "heartbeat")
     time.sleep(30)
+
 @application.before_first_request
 def setting_communications():
   try:

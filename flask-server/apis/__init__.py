@@ -2,10 +2,12 @@ from flask import Flask
 
 from .openData import api as bp1
 from .users import api as bp2
+from .deviceManagement import api as bp3
 
 app = Flask(__name__)
 app.register_blueprint(bp1)
 app.register_blueprint(bp2)
+app.register_blueprint(bp3)
 
 
 # @app.after_request
