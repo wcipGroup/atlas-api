@@ -20,7 +20,7 @@ from threading import Lock
 #     print("BEFORE REQUEST")
 def mqttc_keep_alive(mqttc):
   while 1:
-    mqttc.publish('atlas/keep_alive', "heartbeat")
+    mqttc.publish('atlas/keep_alive', "heartbeat [atlas api]")
     time.sleep(30)
 
 @application.before_first_request
