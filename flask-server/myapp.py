@@ -52,7 +52,7 @@ def my_invalid_token_loader(token):
 #     return user['id']
 def mqttc_keep_alive(mqttc):
     while 1:
-        mqttc.publish('atlas/keep_alive', "heartbeat")
+        mqttc.publish('atlas/keep_alive', "heartbeat [atlas api]")
         time.sleep(30)
 
 if __name__ == "__main__":
