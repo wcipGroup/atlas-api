@@ -208,7 +208,7 @@ def deviceTxPower(devAddr):
             db = Mongo.get_db()
             col = db["downlink_mac"]
             col.update({"devAddr": devAddr},
-                       {"$set": {"tx_power": {"commandType": "tx_power", "commandId": 4,
+                       {"$set": {"txPower": {"commandType": "txPower", "commandId": 4,
                                               "value": txPower, "dateCreated": datetime.now(),
                                               "status": "pending"}}},
                        upsert=True)
