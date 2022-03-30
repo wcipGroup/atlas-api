@@ -178,7 +178,7 @@ def deviceInterval(devAddr):
             db = Mongo.get_db()
             col = db["downlink_mac"]
             col.update({"devAddr": devAddr},
-                       {"$set": {"interval": {"commandType": "interval", "commandId": 1,
+                       {"$set": {"interval": {"commandType": "interval", "commandId": 2,
                                               "value": interval, "dateCreated": datetime.now(),
                                               "status": "pending"}}},
                        upsert=True)
@@ -196,6 +196,25 @@ def deviceInterval(devAddr):
             return jsonify(interval=20), 200
         except Exception:
             return jsonify(msg="Bad Gateway"), 501
+
+
+@api.route('/user-data/<devAddr>/txpower', methods=['GET', 'POST'])
+@jwt_required
+def deviceTxPower(devAddr):
+    if request.method == "POST":
+        try:
+            dt = request.get_json()
+            txPower = dt["txPower"]
+            db = Mongo.get_db()
+            col = db["downlink_mac"]
+            col.update({"devAddr": devAddr},
+                       {"$set": {"tx_power": {"commandType": "tx_power", "commandId": 4,
+                                              "value": txPower, "dateCreated": datetime.now(),
+                                              "status": "pending"}}},
+                       upsert=True)
+        except Exception:
+            return jsonify(msg="Bad Gateway"), 501
+        return jsonify(msg="ok"), 200
 
 
 @api.route('/user-data/notifications/<destId>', methods=['GET', 'POST'])
