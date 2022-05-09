@@ -30,7 +30,7 @@ def authenticate():
             return jsonify(msg="not found"), 404
         access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
         return jsonify(access_token=access_token, identity=data["username"]), 200
-    except:
+    except Exception:
         return jsonify(msg="bad gateway"), 500
 
 
@@ -215,6 +215,21 @@ def deviceTxPower(devAddr):
         except Exception:
             return jsonify(msg="Bad Gateway"), 501
         return jsonify(msg="ok"), 200
+
+
+@api.route('/user-data/<devAddr>/optimizations', methods=['PUT'])
+@jwt_required
+def deviceOptimizations(devAddr):
+    try:
+        dt = request.get_json()
+        preference = dt["preference"]
+        db = Mongo.get_db()
+        col = db["devices"]
+        col.update({"devAddr": devAddr},
+                   {"$set": {"optimizations": preference}})
+    except Exception:
+        return jsonify(msg="Bad Gateway"), 501
+    return jsonify(msg="ok"), 200
 
 
 @api.route('/user-data/notifications/<destId>', methods=['GET', 'POST'])
