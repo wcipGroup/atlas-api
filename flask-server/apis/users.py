@@ -30,7 +30,7 @@ def authenticate():
             return jsonify(msg="not found"), 404
         access_token = create_access_token(identity=data["username"], expires_delta=timedelta(days=30))
         return jsonify(access_token=access_token, identity=data["username"]), 200
-    except Exception:
+    except Exception as e:
         return jsonify(msg="bad gateway"), 500
 
 
@@ -121,6 +121,17 @@ def getData(devAddr):
     db = Mongo.get_db()
     col = db["device_raw_data"]
     sensor_data = list(col.find({"devAddr": devAddr, "msgType": "04"}, {"_id": 0}))
+    return jsonify(data=sensor_data), 200
+
+
+@api.route('/user-data/predictions/<devAddr>', methods=['GET'])
+@jwt_required
+def getPredictions(devAddr):
+    db = Mongo.get_db()
+    col = db["predictions"]
+    sensor_data = list(col.find({"devAddr": devAddr}, {"_id": 0}))
+    if len(sensor_data):
+        sensor_data = sensor_data[0]
     return jsonify(data=sensor_data), 200
 
 
