@@ -34,6 +34,7 @@ def setting_communications():
     pub = Publisher(config["AMQP"])
     mqttc = Mongo.get_mqttc()
     threading.Thread(target=mqttc_keep_alive, args=(mqttc,)).start()
+    mqttc.publish('atlas/system', "starting [atlas api]")
   except Exception as e:
     print("log", str(e))
 
