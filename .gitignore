@@ -52,3 +52,6 @@ docs/_build/
 
 # Config File
 config.json
+config.json.old
+config.json.save
+config.json.save1
