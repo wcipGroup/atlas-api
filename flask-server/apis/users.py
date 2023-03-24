@@ -129,7 +129,7 @@ def getData(devAddr):
 def getPredictions(devAddr):
     db = Mongo.get_db()
     col = db["predictions"]
-    sensor_data = list(col.find({"devAddr": devAddr}, {"_id": 0}))
+    sensor_data = list(col.find())
     if len(sensor_data):
         sensor_data = sensor_data[0]
     return jsonify(data=sensor_data), 200
